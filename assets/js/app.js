@@ -239,6 +239,49 @@ const DataManager = {
         }
     },
 
+    // Load citizen reports with images
+    loadCitizenReports: async () => {
+        try {
+            console.log('📸 Cargando reportes ciudadanos...');
+            
+            // Reporte ciudadano con imagen real
+            const citizenReports = [{
+                id: 'citizen-2025-10-18-basura-001',
+                fecha_evento: '2025-10-18',
+                titulo: 'Acumulación de basura reportada por ciudadano',
+                direccion: 'Zona residencial Hermosillo',
+                colonia: 'Centro',
+                lat: 29.0892,  // Coordenadas de Hermosillo (se actualizarán con EXIF si están disponibles)
+                lon: -110.9608,
+                gravedad: 'medio',
+                mm_lluvia: 0,
+                tipo_evento: 'contaminacion',
+                medio: 'Reporte Ciudadano - EcoTrack',
+                descripcion: 'Ciudadano reporta acumulación de basura en área residencial. Detectado mediante AI.',
+                imagen: 'assets/data/IMG_6701.JPG',
+                url_noticia: null,
+                tipo_reporte: 'ciudadano',
+                detectado_ai: true,
+                fecha_reporte: new Date().toISOString()
+            }];
+
+            // Agregar reportes ciudadanos a los incidentes existentes
+            AppState.incidents.push(...citizenReports);
+            
+            // Agregar marcadores al mapa para reportes ciudadanos
+            citizenReports.forEach(report => {
+                MapManager.addCitizenReportToMap(report);
+            });
+            
+            Utils.showNotification(`${citizenReports.length} reportes ciudadanos cargados`, 'info');
+            console.log('📸 Reportes ciudadanos cargados:', citizenReports);
+            
+        } catch (error) {
+            console.error('❌ Error loading citizen reports:', error);
+            Utils.showNotification('Error al cargar reportes ciudadanos', 'error');
+        }
+    },
+
     // Initialize with sample data (fallback)
     initializeData: () => {
         const initialIncident = {
@@ -417,6 +460,83 @@ const MapManager = {
 
             // Store marker reference for cleanup
         MapManager.markers.push(marker);
+    },
+
+    // Add citizen report to map with enhanced popup
+    addCitizenReportToMap: (report) => {
+        // Defensive checks
+        if (!report || typeof report.lat !== 'number' || typeof report.lon !== 'number' || isNaN(report.lat) || isNaN(report.lon)) {
+            console.warn('Intento de añadir reporte ciudadano con coordenadas inválidas:', report && report.id);
+            return null;
+        }
+
+        // Create custom icon for citizen reports
+        const citizenIcon = L.divIcon({
+            className: 'citizen-marker',
+            html: `
+                <div class="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg border-2 border-white">
+                    <i class="fas fa-camera text-xs"></i>
+                </div>
+            `,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+            popupAnchor: [0, -16]
+        });
+
+        const marker = L.marker([report.lat, report.lon], {
+            icon: citizenIcon
+        });
+        
+        marker.addTo(AppState.map)
+              .bindPopup(`
+                  <div class="p-4 max-w-sm">
+                      <h3 class="font-bold text-sm mb-2 text-green-700">
+                          <i class="fas fa-camera mr-1"></i>${report.titulo}
+                      </h3>
+                      ${report.imagen ? `
+                          <div class="mb-3">
+                              <img src="${report.imagen}" 
+                                   alt="Imagen del reporte" 
+                                   class="w-full h-32 object-cover rounded-lg border border-gray-200"
+                                   style="cursor: pointer;"
+                                   onclick="window.open('${report.imagen}', '_blank')"
+                                   onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                              <div class="hidden text-gray-500 text-xs text-center p-4 border border-gray-200 rounded-lg">
+                                  <i class="fas fa-image mb-1"></i><br>
+                                  Imagen no disponible
+                              </div>
+                          </div>
+                      ` : ''}
+                      <div class="space-y-1 text-xs text-slate-600">
+                          <p><i class="fas fa-map-marker-alt w-4 text-green-600"></i> ${report.direccion || report.colonia || 'Ubicación detectada automáticamente'}</p>
+                          <p><i class="fas fa-calendar w-4 text-green-600"></i> ${Utils.formatDate(report.fecha_evento)}</p>
+                          ${report.detectado_ai ? '<p><i class="fas fa-robot w-4 text-green-600"></i> Detectado con IA</p>' : ''}
+                          <p><i class="fas fa-user w-4 text-green-600"></i> ${report.medio}</p>
+                      </div>
+                      <div class="mt-2">
+                          <span class="inline-block px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                              <i class="fas fa-leaf mr-1"></i>REPORTE CIUDADANO
+                          </span>
+                      </div>
+                      ${report.descripcion ? `
+                          <div class="mt-2 p-2 bg-gray-50 rounded text-xs">
+                              <strong>Descripción:</strong> ${report.descripcion}
+                          </div>
+                      ` : ''}
+                  </div>
+              `, {
+                  maxWidth: 280,
+                  className: 'citizen-popup'
+              })
+              .on('click', () => {
+                  UIManager.displayIncidentDetails(report);
+                  AppState.map.setView([report.lat, report.lon], 16);
+              });
+
+        // Store marker reference for cleanup
+        MapManager.markers.push(marker);
+        
+        console.log('📸 Reporte ciudadano agregado al mapa:', report.id);
     },
 
     // Load AGEB Urbanas layer

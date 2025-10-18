@@ -512,6 +512,41 @@ body::before {
     accent-color: var(--accent-color);
 }
 
+/* Citizen Report Markers */
+.citizen-marker {
+    border-radius: 50%;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: pulse-green 2s infinite;
+}
+
+.citizen-marker:hover {
+    transform: scale(1.1);
+    z-index: 1000;
+}
+
+.citizen-popup .leaflet-popup-content-wrapper {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(255, 255, 255, 0.95) 100%);
+    border: 2px solid var(--primary-color);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.15);
+}
+
+.citizen-popup .leaflet-popup-tip {
+    background: var(--primary-color);
+}
+
+@keyframes pulse-green {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
 /* ==========================================================================
    Navigation
    ========================================================================== */

@@ -48,6 +48,9 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // Load CSV data (await so subsequent steps run after data is loaded)
     await DataManager.loadCSVData();
+    
+    // Load citizen reports
+    await DataManager.loadCitizenReports();
     console.log('📊 Datos CSV cargados');
 
     // Setup main report button

@@ -569,22 +569,55 @@ function drawDetections(predictions) {
     predictions.forEach((pred, i) => {
         const { x, y, width, height, confidence, class: className } = pred;
         
-        // Calcular posición en píxeles
-        const centerX = x * scaleX;
-        const centerY = y * scaleY;
-        const boxW = width * scaleX;
-        const boxH = height * scaleY;
+        console.log(`🎯 Detección ${i+1}:`, { x, y, width, height, confidence, className });
+        console.log(`📏 Escalas: scaleX=${scaleX}, scaleY=${scaleY}`);
+        console.log(`🖼️ Imagen: naturalWidth=${img.naturalWidth}, naturalHeight=${img.naturalHeight}`);
+        console.log(`📱 Display: offsetWidth=${img.offsetWidth}, offsetHeight=${img.offsetHeight}`);
         
+        // Las coordenadas de Roboflow pueden venir en formato centro+tamaño
+        // x,y son el centro del objeto, width/height son las dimensiones
+        let centerX, centerY, boxW, boxH;
+        
+        // Si las coordenadas están en píxeles absolutos (imagen completa)
+        if (x > 1 || y > 1 || width > 1 || height > 1) {
+            // Coordenadas en píxeles de la imagen original
+            centerX = x * scaleX;
+            centerY = y * scaleY;
+            boxW = width * scaleX;
+            boxH = height * scaleY;
+        } else {
+            // Coordenadas normalizadas (0-1)
+            centerX = x * img.offsetWidth;
+            centerY = y * img.offsetHeight;
+            boxW = width * img.offsetWidth;
+            boxH = height * img.offsetHeight;
+        }
+        
+        // Calcular esquina superior izquierda
         const left = centerX - (boxW / 2);
         const top = centerY - (boxH / 2);
+        
+        console.log(`📍 Posición calculada: left=${left}, top=${top}, width=${boxW}, height=${boxH}`);
+        
+        // Obtener posición de la imagen dentro del contenedor
+        const imgRect = img.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        const imgOffsetX = imgRect.left - containerRect.left;
+        const imgOffsetY = imgRect.top - containerRect.top;
+        
+        // Ajustar posición relativa a la imagen
+        const finalLeft = imgOffsetX + left;
+        const finalTop = imgOffsetY + top;
+        
+        console.log(`🎯 Posición final: left=${finalLeft}, top=${finalTop}`);
         
         // Crear caja
         const box = document.createElement('div');
         box.className = 'detection-box';
         box.style.cssText = `
             position: absolute;
-            left: ${left}px;
-            top: ${top}px;
+            left: ${finalLeft}px;
+            top: ${finalTop}px;
             width: ${boxW}px;
             height: ${boxH}px;
             border: 3px solid ${colors[i % colors.length]};
