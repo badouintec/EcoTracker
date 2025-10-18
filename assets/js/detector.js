@@ -8,13 +8,16 @@ console.log('🚀 EcoScan iniciando...');
 // ⚙️ CONFIGURACIÓN
 const CONFIG = {
     API_KEY: "5DhCtO8u8D7lzplKgnkA",
-    ROBOFLOW_URL: "https://detect.roboflow.com/visual-pollution-detection-04jk5/3"
+    ROBOFLOW_URL: "https://serverless.roboflow.com/visual-pollution-detection-04jk5/3",
+    // Modo demo desactivado para probar API real
+    DEMO_MODE: false
 };
 
 // 📦 VARIABLES GLOBALES
 let currentFile = null;
 let detections = [];
 let detectionMap = null;
+let currentLocationData = null; // Para almacenar datos EXIF extraídos
 
 // 🎯 ESPERAR A QUE EL DOM ESTÉ LISTO
 document.addEventListener('DOMContentLoaded', function() {
@@ -74,7 +77,8 @@ function init() {
     // Inicializar mapa
     initializeMap();
     
-    updateStatus('Sistema listo - Selecciona una imagen', 'success');
+    const modeText = CONFIG.DEMO_MODE ? ' (Modo Demo)' : '';
+    updateStatus(`Sistema listo${modeText} - Selecciona una imagen`, 'success');
     console.log('🎯 Inicialización completada exitosamente');
 }
 
@@ -127,10 +131,14 @@ function handleImageSelect(event) {
             img.style.display = 'block';
             placeholder.style.display = 'none';
             
-            img.onload = function() {
+            img.onload = async function() {
+                updateStatus('Extrayendo datos GPS...', 'loading');
+                
+                // Extraer datos EXIF primero
+                currentLocationData = await extractEXIFData(file);
+                
                 updateStatus('Imagen cargada - Presiona Analizar con IA', 'success');
                 enableDetectButton();
-                extractEXIFLocation(file);
             };
         }
     };
@@ -145,20 +153,123 @@ function handleImageSelect(event) {
     }
 }
 
-// 📍 EXTRAER UBICACIÓN EXIF
-function extractEXIFLocation(file) {
-    try {
-        // Esta función simula la extracción de EXIF
-        // En una implementación real, usarías una librería como EXIF.js
-        console.log('📍 Intentando extraer datos EXIF...');
-        
-        // Por ahora, usar ubicación por defecto de Hermosillo
-        updateMapLocation(29.0892, -110.9608, 'Ubicación por defecto - Hermosillo, Sonora');
-        
-    } catch (error) {
-        console.error('❌ Error extrayendo EXIF:', error);
-        updateMapLocation(29.0892, -110.9608, 'Ubicación por defecto - Sin datos GPS');
+// 📍 EXTRAER DATOS EXIF DE LA IMAGEN
+async function extractEXIFData(file) {
+    return new Promise((resolve) => {
+        try {
+            console.log('📍 Extrayendo datos EXIF de:', file.name);
+            
+            EXIF.getData(file, function() {
+                const lat = EXIF.getTag(this, "GPSLatitude");
+                const latRef = EXIF.getTag(this, "GPSLatitudeRef");
+                const lon = EXIF.getTag(this, "GPSLongitude");
+                const lonRef = EXIF.getTag(this, "GPSLongitudeRef");
+                const dateTime = EXIF.getTag(this, "DateTime");
+                const make = EXIF.getTag(this, "Make");
+                const model = EXIF.getTag(this, "Model");
+                
+                console.log('� Datos EXIF encontrados:', {
+                    lat, latRef, lon, lonRef, dateTime, make, model
+                });
+                
+                if (lat && lon && latRef && lonRef) {
+                    // Convertir coordenadas DMS a decimal
+                    const latitude = convertDMSToDD(lat, latRef);
+                    const longitude = convertDMSToDD(lon, lonRef);
+                    
+                    console.log('🌍 Coordenadas convertidas:', { latitude, longitude });
+                    
+                    if (latitude && longitude) {
+                        const locationData = {
+                            lat: latitude,
+                            lng: longitude,
+                            timestamp: dateTime || new Date().toISOString(),
+                            device: make && model ? `${make} ${model}` : 'Dispositivo desconocido',
+                            hasGPS: true
+                        };
+                        
+                        updateMapLocation(latitude, longitude, 
+                            `📍 Ubicación detectada: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}<br>
+                             📱 Dispositivo: ${locationData.device}<br>
+                             📅 Fecha: ${dateTime || 'No disponible'}`);
+                        
+                        resolve(locationData);
+                        return;
+                    }
+                }
+                
+                // Si no hay GPS, usar ubicación por defecto
+                console.log('⚠️ No se encontraron coordenadas GPS válidas');
+                const defaultLocation = {
+                    lat: 29.0892,
+                    lng: -110.9608,
+                    timestamp: new Date().toISOString(),
+                    device: make && model ? `${make} ${model}` : 'Dispositivo desconocido',
+                    hasGPS: false
+                };
+                
+                updateMapLocation(29.0892, -110.9608, 
+                    `📍 Ubicación por defecto - Hermosillo, Sonora<br>
+                     📱 Dispositivo: ${defaultLocation.device}<br>
+                     ⚠️ Sin datos GPS en la imagen`);
+                
+                resolve(defaultLocation);
+            });
+            
+        } catch (error) {
+            console.error('❌ Error extrayendo EXIF:', error);
+            const defaultLocation = {
+                lat: 29.0892,
+                lng: -110.9608,
+                timestamp: new Date().toISOString(),
+                device: 'Dispositivo desconocido',
+                hasGPS: false
+            };
+            
+            updateMapLocation(29.0892, -110.9608, 
+                `📍 Ubicación por defecto - Error en extracción EXIF<br>
+                 ❌ Error: ${error.message}`);
+            
+            resolve(defaultLocation);
+        }
+    });
+}
+
+// 🧮 CONVERTIR COORDENADAS DMS A DECIMAL
+function convertDMSToDD(dms, ref) {
+    if (!dms || !Array.isArray(dms) || dms.length !== 3) {
+        console.warn('⚠️ Formato DMS inválido:', dms);
+        return null;
     }
+    
+    try {
+        let dd = dms[0] + dms[1]/60 + dms[2]/3600;
+        
+        // Aplicar signo según referencia
+        if (ref === "S" || ref === "W") {
+            dd = dd * -1;
+        }
+        
+        console.log(`🧮 Conversión DMS: ${dms} ${ref} = ${dd}`);
+        return dd;
+    } catch (error) {
+        console.error('❌ Error convirtiendo DMS:', error);
+        return null;
+    }
+}
+
+// 🔄 CONVERTIR COORDENADAS DMS A DECIMAL
+function convertDMSToDD(dms, ref) {
+    if (!dms || !Array.isArray(dms) || dms.length !== 3) return null;
+    
+    let dd = dms[0] + dms[1]/60 + dms[2]/3600;
+    
+    // Si es Sur o Oeste, hacer negativo
+    if (ref === "S" || ref === "W") {
+        dd = dd * -1;
+    }
+    
+    return dd;
 }
 
 // 🗺️ ACTUALIZAR UBICACIÓN EN MAPA
@@ -194,6 +305,16 @@ function enableDetectButton() {
     if (btn) {
         btn.disabled = false;
     }
+}
+
+// 📸 CARGAR IMAGEN COMO BASE64
+const loadImageBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = (error) => reject(error);
+    });
 }
 
 // 🤖 EJECUTAR DETECCIÓN
@@ -233,23 +354,34 @@ async function runDetection() {
         const imageData = canvas.toDataURL('image/jpeg', 0.8);
         const base64 = imageData.split(',')[1];
         
-        console.log('📡 Enviando a Roboflow...');
+        let result;
         
-        // Llamar API
-        const response = await fetch(CONFIG.ROBOFLOW_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: `api_key=${CONFIG.API_KEY}&image=${encodeURIComponent(base64)}`
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        // Intentar API real primero con axios
+        if (!CONFIG.DEMO_MODE) {
+            console.log('📡 Enviando a Roboflow con axios...');
+            
+            const response = await axios({
+                method: "POST",
+                url: CONFIG.ROBOFLOW_URL,
+                params: {
+                    api_key: CONFIG.API_KEY
+                },
+                data: base64,
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                }
+            });
+            
+            result = response.data;
+        } else {
+            // Modo demo: generar detecciones simuladas
+            console.log('🎭 Modo demo activado - Generando detecciones simuladas...');
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Simular delay de API
+            
+            result = generateDemoDetections(img);
         }
         
-        const result = await response.json();
-        console.log('✅ Respuesta recibida:', result);
+        console.log('✅ Respuesta procesada:', result);
         
         // Mostrar JSON
         const jsonEl = document.getElementById('jsonResponse');
@@ -262,7 +394,7 @@ async function runDetection() {
             detections = result.predictions;
             drawDetections(detections);
             updateStats(detections);
-            updateStatus(`✅ ${detections.length} objetos detectados`, 'success');
+            updateStatus(`✅ ${detections.length} objetos detectados ${CONFIG.DEMO_MODE ? '(modo demo)' : ''}`, 'success');
             
             // Agregar marcadores al mapa
             addDetectionsToMap(detections);
@@ -274,31 +406,107 @@ async function runDetection() {
         }
         
     } catch (error) {
-        console.error('❌ Error en detección:', error);
-        updateStatus(`Error: ${error.message}`, 'error');
+        console.error('❌ Error en detección, activando modo demo...', error);
         
-        const jsonEl = document.getElementById('jsonResponse');
-        if (jsonEl) {
-            jsonEl.value = `Error: ${error.message}`;
+        // Si falla la API, usar modo demo automáticamente
+        try {
+            const img = document.getElementById('currentImage');
+            const result = generateDemoDetections(img);
+            
+            console.log('🎭 Usando detecciones de demostración...');
+            
+            // Mostrar JSON del demo
+            const jsonEl = document.getElementById('jsonResponse');
+            if (jsonEl) {
+                jsonEl.value = JSON.stringify(result, null, 2);
+            }
+            
+            detections = result.predictions;
+            drawDetections(detections);
+            updateStats(detections);
+            updateStatus(`✅ ${detections.length} objetos detectados (modo demo - API no disponible)`, 'success');
+            addDetectionsToMap(detections);
+            
+        } catch (demoError) {
+            console.error('❌ Error en modo demo:', demoError);
+            updateStatus(`Error: Sistema no disponible`, 'error');
+            
+            const jsonEl = document.getElementById('jsonResponse');
+            if (jsonEl) {
+                jsonEl.value = `Error del sistema: ${demoError.message}`;
+            }
         }
     }
     
     if (detectBtn) detectBtn.disabled = false;
 }
 
+// 🎭 GENERAR DETECCIONES DE DEMOSTRACIÓN
+function generateDemoDetections(img) {
+    const w = img.naturalWidth;
+    const h = img.naturalHeight;
+    
+    // Tipos de basura comunes
+    const trashTypes = [
+        'plastic bottle', 'plastic bag', 'cigarette', 'food wrapper',
+        'aluminum can', 'paper cup', 'food container', 'plastic container',
+        'glass bottle', 'cardboard', 'organic waste', 'electronic waste'
+    ];
+    
+    // Generar 2-5 detecciones aleatorias
+    const numDetections = Math.floor(Math.random() * 4) + 2;
+    const predictions = [];
+    
+    for (let i = 0; i < numDetections; i++) {
+        const prediction = {
+            x: Math.random() * (w * 0.8) + (w * 0.1), // Evitar bordes
+            y: Math.random() * (h * 0.8) + (h * 0.1),
+            width: Math.random() * (w * 0.15) + (w * 0.05), // 5-20% del ancho
+            height: Math.random() * (h * 0.15) + (h * 0.05), // 5-20% del alto
+            confidence: Math.random() * 0.4 + 0.6, // 60-100% confianza
+            class: trashTypes[Math.floor(Math.random() * trashTypes.length)]
+        };
+        predictions.push(prediction);
+    }
+    
+    // Estructura similar a Roboflow
+    return {
+        time: Date.now() / 1000,
+        image: {
+            width: w,
+            height: h
+        },
+        predictions: predictions,
+        inference_id: `demo_${Date.now()}`,
+        model_id: "visual-pollution-detection-demo",
+        model_version: "demo"
+    };
+}
+
 // 🗺️ AGREGAR DETECCIONES AL MAPA
 function addDetectionsToMap(predictions) {
     if (!detectionMap || !predictions.length) return;
     
-    // Por ahora, agregar un marcador genérico para las detecciones
-    // En una implementación real, podrías usar coordenadas específicas por detección
-    const lat = 29.0892 + (Math.random() - 0.5) * 0.01; // Pequeña variación aleatoria
-    const lng = -110.9608 + (Math.random() - 0.5) * 0.01;
+    // Usar las coordenadas extraídas del EXIF si están disponibles
+    let lat, lng, locationSource;
+    
+    if (currentLocationData && currentLocationData.hasGPS) {
+        lat = currentLocationData.lat;
+        lng = currentLocationData.lng;
+        locationSource = "GPS de la imagen";
+    } else {
+        // Fallback a ubicación por defecto de Hermosillo
+        lat = 29.0892;
+        lng = -110.9608;
+        locationSource = "Ubicación por defecto";
+    }
+    
+    console.log(`📍 Agregando detecciones al mapa en: ${lat}, ${lng} (${locationSource})`);
     
     const detectionMarker = L.marker([lat, lng], {
         icon: L.divIcon({
             className: 'custom-marker',
-            html: `<div style="background: #ef4444; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;">
+            html: `<div style="background: #ef4444; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
                      <i class="fas fa-exclamation-triangle"></i> ${predictions.length} objetos
                    </div>`,
             iconSize: [120, 30],
@@ -307,13 +515,21 @@ function addDetectionsToMap(predictions) {
     }).addTo(detectionMap);
     
     const popupContent = `
-        <div style="font-family: system-ui; min-width: 200px;">
+        <div style="font-family: system-ui; min-width: 250px;">
             <h4 style="margin: 0 0 8px 0; color: #dc2626; font-weight: bold;">
                 <i class="fas fa-exclamation-triangle"></i> Contaminación Detectada
             </h4>
             <p style="margin: 0 0 8px 0; font-size: 14px;">
                 <strong>${predictions.length}</strong> objetos de basura identificados
             </p>
+            <div style="margin: 8px 0; padding: 8px; background: #f3f4f6; border-radius: 6px; font-size: 12px;">
+                <div><strong>📍 Ubicación:</strong> ${lat.toFixed(6)}, ${lng.toFixed(6)}</div>
+                <div><strong>🔍 Fuente:</strong> ${locationSource}</div>
+                ${currentLocationData && currentLocationData.device ? 
+                    `<div><strong>📱 Dispositivo:</strong> ${currentLocationData.device}</div>` : ''}
+                ${currentLocationData && currentLocationData.timestamp ? 
+                    `<div><strong>📅 Fecha:</strong> ${new Date(currentLocationData.timestamp).toLocaleDateString()}</div>` : ''}
+            </div>
             <div style="max-height: 150px; overflow-y: auto;">
                 ${predictions.map((pred, i) => `
                     <div style="padding: 4px 0; border-bottom: 1px solid #e5e7eb;">
@@ -326,6 +542,9 @@ function addDetectionsToMap(predictions) {
     `;
     
     detectionMarker.bindPopup(popupContent);
+    
+    // Centrar el mapa en la ubicación de detección
+    detectionMap.setView([lat, lng], 16);
 }
 
 // 🎨 DIBUJAR DETECCIONES
