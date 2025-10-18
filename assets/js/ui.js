@@ -14,7 +14,7 @@ const UITemplates = {
                 <div class="p-3 bg-gradient-to-br from-cyan-100 to-blue-100 rounded-xl floating-animation pulse-glow">
                     <i class="fas fa-home text-cyan-600"></i>
                 </div>
-                <span class="gradient-text">Bienvenido a HydroFlujo</span>
+                <span class="gradient-text">Bienvenido a EcoTrack</span>
             </h2>
             <p class="text-slate-600 mt-4 leading-relaxed">
                 Explora el mapa interactivo para descubrir los reportes de afectaciones por lluvias 
