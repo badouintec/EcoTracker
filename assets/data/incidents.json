@@ -1,0 +1,23 @@
+{
+  "incidents": [
+    {
+      "id": "2025-08-17-VSL",
+      "fecha_evento": "2025-08-17",
+      "titulo": "Inundación deja 7 viviendas con pérdida total en Villas de San Lorenzo",
+      "direccion": "Circuito de los Cedros #90 y #92",
+      "colonia": "Villas de San Lorenzo",
+      "lat": 29.1516745,
+      "lon": -111.0054936,
+      "mm_lluvia": 35,
+      "afectaciones": "48 viviendas afectadas; 7 con pérdida total; bardas colapsadas; vehículos y mobiliario dañados.",
+      "gravedad": "alto",
+      "url_noticia": "https://www.elimparcial.com/son/hermosillo/2025/08/19/inundacion-en-hermosillo-deja-perdidas-totales-en-al-menos-7-viviendas-de-colonia-villas-de-san-lorenzo/"
+    }
+  ],
+  "metadata": {
+    "version": "1.0.0",
+    "last_updated": "2025-10-18",
+    "total_incidents": 1,
+    "data_source": "Colaborativo - Ciudadanos de Hermosillo"
+  }
+}
