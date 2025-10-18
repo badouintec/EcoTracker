@@ -281,6 +281,8 @@ const DataManager = {
 
 const MapManager = {
     markers: [],
+    agebLayer: null,
+    layerControl: null,
 
     // Initialize map
     initialize: () => {
@@ -297,12 +299,17 @@ const MapManager = {
             maxZoom: 19
         });
 
-        // Layer control
+        // Base layers
         const baseLayers = {
             "Mapa": osmLayer,
             "Satélite": satelliteLayer
         };
-        L.control.layers(baseLayers).addTo(AppState.map);
+
+        // Initialize layer control with base layers only
+        MapManager.layerControl = L.control.layers(baseLayers).addTo(AppState.map);
+
+        // Load AGEB layer
+        MapManager.loadAGEBLayer();
 
         MapManager.setupControls();
     },
@@ -408,8 +415,74 @@ const MapManager = {
                   AppState.map.setView([incident.lat, incident.lon], 15);
               });
 
-        // Store marker reference for cleanup
+            // Store marker reference for cleanup
         MapManager.markers.push(marker);
+    },
+
+    // Load AGEB Urbanas layer
+    loadAGEBLayer: async () => {
+        try {
+            console.log('🗺️ Cargando capa AGEB Urbanas...');
+            
+            const response = await fetch('GeoJSON/AGEB-Urbanas.geojson');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const agebData = await response.json();
+            
+            // Create AGEB layer with styling
+            MapManager.agebLayer = L.geoJSON(agebData, {
+                style: () => ({
+                    fillColor: '#3b82f6',
+                    weight: 1,
+                    opacity: 0.8,
+                    color: '#1e40af',
+                    fillOpacity: 0.1
+                }),
+                onEachFeature: (feature, layer) => {
+                    if (feature.properties) {
+                        const props = feature.properties;
+                        layer.bindPopup(`
+                            <div class="p-3 max-w-xs">
+                                <h4 class="font-bold text-sm mb-2 gradient-text">AGEB Urbano</h4>
+                                <div class="space-y-1 text-xs">
+                                    <p><strong>CVE_AGEB:</strong> ${props.CVE_AGEB || 'N/A'}</p>
+                                    <p><strong>Código Geo:</strong> ${props.CVEGEO || 'N/A'}</p>
+                                    <p><strong>Municipio:</strong> ${props.CVE_MUN === '030' ? 'Hermosillo' : props.CVE_MUN}</p>
+                                    <p><strong>Estado:</strong> ${props.CVE_ENT === '26' ? 'Sonora' : props.CVE_ENT}</p>
+                                </div>
+                            </div>
+                        `);
+                        
+                        // Highlight on hover
+                        layer.on({
+                            mouseover: (e) => {
+                                const layer = e.target;
+                                layer.setStyle({
+                                    weight: 2,
+                                    color: '#0ea5e9',
+                                    fillOpacity: 0.3
+                                });
+                            },
+                            mouseout: (e) => {
+                                MapManager.agebLayer.resetStyle(e.target);
+                            }
+                        });
+                    }
+                }
+            });
+
+            // Add to layer control as overlay (optional layer)
+            MapManager.layerControl.addOverlay(MapManager.agebLayer, '🏙️ AGEB Urbanos');
+            
+            console.log('✅ Capa AGEB Urbanas cargada exitosamente');
+            Utils.showNotification('Capa AGEB Urbanos disponible en el control de capas', 'success');
+            
+        } catch (error) {
+            console.error('Error loading AGEB layer:', error);
+            Utils.showNotification('Error al cargar la capa AGEB Urbanos', 'error');
+        }
     }
 };
 

@@ -11,19 +11,19 @@ const UITemplates = {
     welcomePanel: () => `
         <div class="fade-in">
             <h2 class="text-2xl font-bold text-slate-800 mb-4 flex items-center gap-3">
-                <div class="p-2 bg-cyan-100 rounded-lg">
+                <div class="p-3 bg-gradient-to-br from-cyan-100 to-blue-100 rounded-xl floating-animation pulse-glow">
                     <i class="fas fa-home text-cyan-600"></i>
                 </div>
-                Bienvenido a HydroFlujo
+                <span class="gradient-text">Bienvenido a HydroFlujo</span>
             </h2>
             <p class="text-slate-600 mt-4 leading-relaxed">
                 Explora el mapa interactivo para descubrir los reportes de afectaciones por lluvias 
                 e inundaciones en Hermosillo, Sonora.
             </p>
-            <div class="mt-6 p-4 bg-gradient-to-r from-cyan-50 to-blue-50 rounded-xl border border-cyan-200">
+            <div class="mt-6 p-6 welcome-gradient rounded-2xl border border-cyan-200 shine-effect">
                 <h4 class="font-bold text-cyan-800 text-lg flex items-center gap-2 mb-3">
-                    <i class="fas fa-lightbulb"></i> 
-                    ¿Cómo funciona?
+                    <i class="fas fa-lightbulb text-yellow-500 floating-animation"></i> 
+                    <span class="gradient-text">¿Cómo funciona?</span>
                 </h4>
                 <ul class="text-sm text-cyan-700 space-y-2">
                     <li class="flex items-start gap-2">
@@ -41,13 +41,13 @@ const UITemplates = {
                 </ul>
             </div>
             <div class="mt-6 grid grid-cols-2 gap-4 text-center">
-                <div class="p-3 bg-white rounded-lg border border-slate-200">
-                    <div class="text-xl font-bold text-cyan-600">${AppState.incidents.length}</div>
-                    <div class="text-xs text-slate-600">Reportes Activos</div>
+                <div class="p-4 bg-gradient-to-br from-white to-cyan-50 rounded-2xl border border-slate-200 shine-effect hover:scale-105 transition-all duration-300">
+                    <div class="text-2xl font-bold gradient-text">${AppState.incidents.length}</div>
+                    <div class="text-xs text-slate-600 font-medium">Reportes Activos</div>
                 </div>
-                <div class="p-3 bg-white rounded-lg border border-slate-200">
-                    <div class="text-xl font-bold text-green-600">24/7</div>
-                    <div class="text-xs text-slate-600">Monitoreo</div>
+                <div class="p-4 bg-gradient-to-br from-white to-green-50 rounded-2xl border border-slate-200 shine-effect hover:scale-105 transition-all duration-300">
+                    <div class="text-2xl font-bold text-green-600 floating-animation">24/7</div>
+                    <div class="text-xs text-slate-600 font-medium">Monitoreo</div>
                 </div>
             </div>
         </div>
@@ -64,16 +64,16 @@ const UITemplates = {
         return `
             <div class="fade-in">
                 <div class="flex justify-between items-start mb-6">
-                    <h2 class="text-xl font-bold text-slate-800 leading-tight">${incident.titulo}</h2>
-                    <button id="close-details-btn" class="text-slate-400 hover:text-slate-600 text-2xl p-1 rounded-full hover:bg-slate-100 transition-colors" title="Cerrar">
+                    <h2 class="text-xl font-bold gradient-text leading-tight pr-4">${incident.titulo}</h2>
+                    <button id="close-details-btn" class="text-slate-400 hover:text-slate-600 text-2xl p-2 rounded-full hover:bg-gradient-to-br hover:from-red-50 hover:to-red-100 transition-all duration-300 hover:scale-110" title="Cerrar">
                         &times;
                     </button>
                 </div>
                 
                 <div class="space-y-4">
                     <!-- Información básica -->
-                    <div class="card p-4 bg-slate-50">
-                        <div class="grid grid-cols-1 gap-3 text-sm">
+                    <div class="card p-6 bg-gradient-to-br from-slate-50 to-blue-50 shine-effect">
+                        <div class="grid grid-cols-1 gap-4 text-sm">
                             <div>
                                 <span class="font-semibold text-slate-500 block mb-1">FECHA DEL EVENTO</span>
                                 <span class="text-slate-700 flex items-center gap-2">
@@ -100,11 +100,11 @@ const UITemplates = {
 
                     <!-- Datos meteorológicos -->
                     ${incident.mm_lluvia ? `
-                        <div class="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                            <i class="fas fa-cloud-rain text-blue-600 text-lg"></i>
+                        <div class="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl border border-blue-200 shine-effect">
+                            <i class="fas fa-cloud-rain text-blue-600 text-2xl floating-animation"></i>
                             <div>
                                 <span class="font-semibold text-blue-800 block">Precipitación Reportada</span>
-                                <span class="text-blue-700">${incident.mm_lluvia} mm</span>
+                                <span class="text-blue-700 text-lg font-bold">${incident.mm_lluvia} mm</span>
                             </div>
                         </div>
                     ` : ''}
@@ -148,13 +148,13 @@ const UITemplates = {
                         </a>
                     ` : ''}
 
-                    <div class="flex gap-2 mt-6">
+                    <div class="flex gap-3 mt-6">
                         <button onclick="AppState.map.setView([${incident.lat}, ${incident.lon}], 16)" 
-                                class="flex-1 text-sm py-2 px-3 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors">
-                            <i class="fas fa-crosshairs mr-1"></i>Centrar en mapa
+                                class="flex-1 text-sm py-3 px-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl hover:from-cyan-700 hover:to-blue-700 transition-all duration-300 shine-effect hover:scale-105 font-semibold">
+                            <i class="fas fa-crosshairs mr-2"></i>Centrar en mapa
                         </button>
                         <button onclick="UIManager.shareIncident('${incident.titulo}', '${incident.afectaciones.substring(0, 100)}...')" 
-                                class="text-sm py-2 px-3 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors">
+                                class="text-sm py-3 px-4 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 rounded-xl hover:from-slate-200 hover:to-slate-300 transition-all duration-300 shine-effect hover:scale-105 font-semibold">
                             <i class="fas fa-share-alt"></i>
                         </button>
                     </div>
@@ -166,22 +166,22 @@ const UITemplates = {
     reportForm: () => `
         <div class="fade-in">
             <div class="flex justify-between items-start mb-6">
-                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
-                    <div class="p-2 bg-green-100 rounded-lg">
+                <h2 class="text-xl font-bold gradient-text flex items-center gap-3">
+                    <div class="p-3 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl floating-animation pulse-glow">
                         <i class="fas fa-plus-square text-green-600"></i>
                     </div>
-                    Nuevo Reporte
+                    <span class="gradient-text">Nuevo Reporte</span>
                 </h2>
                 <button id="cancel-form-btn" class="text-slate-400 hover:text-slate-600 text-2xl p-1 rounded-full hover:bg-slate-100 transition-colors">
                     &times;
                 </button>
             </div>
             
-            <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div class="flex items-start gap-3">
-                    <i class="fas fa-info-circle text-blue-600 mt-1"></i>
+            <div class="mb-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl shine-effect">
+                <div class="flex items-start gap-4">
+                    <i class="fas fa-info-circle text-blue-600 mt-1 text-lg floating-animation"></i>
                     <div class="text-sm text-blue-800">
-                        <p class="font-semibold mb-1">Instrucciones:</p>
+                        <p class="font-bold mb-2 gradient-text">Instrucciones:</p>
                         <p>Haz clic en el mapa para marcar la ubicación del evento y luego completa el formulario.</p>
                     </div>
                 </div>
