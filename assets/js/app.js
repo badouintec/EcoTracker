@@ -579,6 +579,30 @@ const DataManager = {
     loadCitizenReports: async () => {
         try {
             console.log('📸 Cargando reportes ciudadanos...');
+
+            // Intentar cargar desde backend (Railway/Postgres)
+            try {
+                const response = await fetch('/api/reports?limit=500');
+                if (response.ok) {
+                    const reports = await response.json();
+                    if (Array.isArray(reports) && reports.length > 0) {
+                        // Normalizar shape para compatibilidad UI (afectaciones/descripcion)
+                        reports.forEach(r => {
+                            if (r && !r.afectaciones && r.descripcion) r.afectaciones = r.descripcion;
+                            if (r && !r.descripcion && r.afectaciones) r.descripcion = r.afectaciones;
+                        });
+                        AppState.citizenReports = reports;
+                        reports.forEach(report => {
+                            MapManager.addCitizenReportToMap(report);
+                        });
+                        Utils.showNotification(`${reports.length} reportes ciudadanos cargados (BD)`, 'info');
+                        console.log('📸 Reportes ciudadanos (BD):', reports);
+                        return;
+                    }
+                }
+            } catch (apiError) {
+                console.warn('⚠️ No se pudo cargar /api/reports, usando fallback local:', apiError);
+            }
             
             // Reporte ciudadano con imagen real
             const citizenReports = [{
@@ -603,6 +627,9 @@ const DataManager = {
 
             // Agregar reportes ciudadanos a los incidentes existentes
             AppState.incidents.push(...citizenReports);
+
+            // Mantenerlos también en AppState.citizenReports
+            AppState.citizenReports = citizenReports;
             
             // Agregar marcadores al mapa para reportes ciudadanos
             citizenReports.forEach(report => {

@@ -7,9 +7,10 @@ console.log('🚀 EcoScan iniciando...');
 
 // ⚙️ CONFIGURACIÓN
 const CONFIG = {
-    API_KEY: "5DhCtO8u8D7lzplKgnkA",
-    ROBOFLOW_URL: "https://serverless.roboflow.com/visual-pollution-detection-04jk5/3",
-    // Modo demo desactivado para probar API real
+    // Endpoint del backend (sirve como proxy seguro a Roboflow)
+    // Cuando el frontend se sirve desde el mismo backend, esto funciona en local y prod.
+    API_URL: "/api/analyze",
+    // Modo demo (detecciones simuladas) para cuando el backend/IA no está disponible
     DEMO_MODE: false
 };
 
@@ -350,28 +351,29 @@ async function runDetection() {
         canvas.height = h;
         ctx.drawImage(img, 0, 0, w, h);
         
-        // Convertir a base64
-        const imageData = canvas.toDataURL('image/jpeg', 0.8);
-        const base64 = imageData.split(',')[1];
-        
         let result;
         
-        // Intentar API real primero con axios
+        // Intentar API real primero (backend proxy)
         if (!CONFIG.DEMO_MODE) {
-            console.log('📡 Enviando a Roboflow con axios...');
-            
-            const response = await axios({
-                method: "POST",
-                url: CONFIG.ROBOFLOW_URL,
-                params: {
-                    api_key: CONFIG.API_KEY
-                },
-                data: base64,
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded"
-                }
+            console.log('📡 Enviando imagen al backend (/api/analyze)...');
+
+            const blob = await new Promise((resolve) => {
+                canvas.toBlob(
+                    (b) => resolve(b),
+                    'image/jpeg',
+                    0.8
+                );
             });
-            
+
+            if (!blob) {
+                throw new Error('No se pudo convertir la imagen a JPEG');
+            }
+
+            const formData = new FormData();
+            const filename = (currentFile && currentFile.name) ? currentFile.name : 'image.jpg';
+            formData.append('file', new File([blob], filename, { type: 'image/jpeg' }));
+
+            const response = await axios.post(CONFIG.API_URL, formData);
             result = response.data;
         } else {
             // Modo demo: generar detecciones simuladas
@@ -406,6 +408,10 @@ async function runDetection() {
         }
         
     } catch (error) {
+        const status = error?.response?.status;
+        if (status === 501) {
+            console.warn('⚠️ Backend sin ROBOFLOW_API_KEY configurada. Usando modo demo.');
+        }
         console.error('❌ Error en detección, activando modo demo...', error);
         
         // Si falla la API, usar modo demo automáticamente
@@ -424,7 +430,8 @@ async function runDetection() {
             detections = result.predictions;
             drawDetections(detections);
             updateStats(detections);
-            updateStatus(`✅ ${detections.length} objetos detectados (modo demo - API no disponible)`, 'success');
+            const hint = status === 501 ? ' (configura ROBOFLOW_API_KEY en el backend)' : '';
+            updateStatus(`✅ ${detections.length} objetos detectados (modo demo - IA no disponible)${hint}`, 'success');
             addDetectionsToMap(detections);
             
         } catch (demoError) {

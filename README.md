@@ -109,19 +109,16 @@ cd EcoTrack
 
 2. **Configurar servidor local**
 ```bash
-# Opción 1: Python
-python3 -m http.server 8080
-
-# Opción 2: Node.js
-npx http-server -p 8080
-
-# Opción 3: PHP
-php -S localhost:8080
+# Recomendado: levantar el backend (sirve el frontend + API proxy)
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn backend.main:app --reload --port 8000
 ```
 
 3. **Acceder a la aplicación**
 ```
-http://localhost:8080
+http://localhost:8000
 ```
 
 ### Uso del Sistema
@@ -141,16 +138,35 @@ http://localhost:8080
 ## ⚙️ Configuración
 
 ### API de Roboflow
-El sistema utiliza la API de Roboflow para detección de contaminación:
+La detección IA se consume **solo desde el backend** (proxy seguro) para no exponer llaves en el navegador.
 
-```javascript
-// assets/js/detector.js
-const CONFIG = {
-    API_KEY: "5DhCtO8u8D7lzplKgnkA",
-    ROBOFLOW_URL: "https://serverless.roboflow.com/visual-pollution-detection-04jk5/3",
-    DEMO_MODE: false
-};
-```
+- Variables de entorno:
+  - `ROBOFLOW_API_KEY`: requerida para usar IA real
+  - `ROBOFLOW_MODEL`: opcional (default: `visual-pollution-detection-04jk5/3`)
+
+Puedes usar `.env.example` como plantilla para desarrollo local.
+
+Si `ROBOFLOW_API_KEY` no está configurada, el detector entra automáticamente en **modo demo**.
+
+## 🚄 Deploy en Railway
+
+1. Conecta este repo en Railway como nuevo proyecto.
+2. (Opcional pero recomendado) Añade un plugin de **PostgreSQL** en Railway.
+3. Configura Variables (Settings → Variables):
+    - `ROBOFLOW_API_KEY`
+    - `ROBOFLOW_MODEL` (opcional)
+    - `DATABASE_URL` (si usas PostgreSQL en Railway)
+4. Railway usará `railway.json` y arrancará con:
+    - `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
+
+Endpoints útiles:
+- `GET /api/health` (verifica configuración)
+- `POST /api/analyze` (recibe `multipart/form-data` con `file`)
+- `GET /api/reports` (lista reportes desde Postgres)
+- `POST /api/reports` (crea reporte en Postgres)
+
+Notas:
+- Si `DATABASE_URL` está configurada, el backend inicializa automáticamente `PostGIS` y crea la tabla `reports` en el arranque.
 
 ### Procesamiento de Datos CONAGUA
 Para actualizar datos históricos:

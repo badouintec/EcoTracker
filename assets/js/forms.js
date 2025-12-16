@@ -102,21 +102,47 @@ const FormManager = {
             newIncident.lon = parseFloat(newIncident.lon);
             newIncident.mm_lluvia = newIncident.mm_lluvia || null;
             newIncident.direccion = newIncident.direccion || 'No especificada';
-            
-            // Simulate API call delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Add to data
-            DataManager.addIncident(newIncident);
+            // Normalizar campos entre UI (afectaciones) y backend (descripcion)
+            if (!newIncident.descripcion && newIncident.afectaciones) {
+                newIncident.descripcion = newIncident.afectaciones;
+            }
+
+            // Intentar persistir en backend (Railway/Postgres)
+            let savedIncident = null;
+            try {
+                const response = await fetch('/api/reports', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newIncident)
+                });
+
+                if (response.ok) {
+                    savedIncident = await response.json();
+                    // Asegurar compatibilidad con UI (usa `afectaciones` en detalles)
+                    if (savedIncident && !savedIncident.afectaciones) {
+                        savedIncident.afectaciones = savedIncident.descripcion || newIncident.afectaciones || '';
+                    }
+                    if (savedIncident && !savedIncident.descripcion) {
+                        savedIncident.descripcion = savedIncident.afectaciones || newIncident.afectaciones || '';
+                    }
+                }
+            } catch (apiError) {
+                console.warn('⚠️ No se pudo guardar en /api/reports, usando guardado local:', apiError);
+            }
+
+            const incidentToUse = savedIncident || newIncident;
+
+            // Add to data (local UI)
+            DataManager.addIncident(incidentToUse);
             
             // Clean up form state
             FormManager.cancelNewReport();
             
             // Show incident details and center map
-            UIManager.displayIncidentDetails(newIncident);
-            AppState.map.setView([newIncident.lat, newIncident.lon], 15);
+            UIManager.displayIncidentDetails(incidentToUse);
+            AppState.map.setView([incidentToUse.lat, incidentToUse.lon], 15);
             
-            Utils.showNotification('Reporte guardado exitosamente', 'success');
+            Utils.showNotification(savedIncident ? 'Reporte guardado en BD' : 'Reporte guardado (local)', 'success');
             
         } catch (error) {
             Utils.showNotification(error.message, 'error');

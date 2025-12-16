@@ -59,7 +59,13 @@ const UITemplates = {
             medio: { class: 'status-medio', icon: 'fas fa-exclamation-circle' },
             bajo: { class: 'status-bajo', icon: 'fas fa-info-circle' }
         };
-        const config = severityConfig[incident.gravedad] || severityConfig.bajo;
+        const gravedadKey = (incident && incident.gravedad ? String(incident.gravedad) : 'bajo').toLowerCase();
+        const config = severityConfig[gravedadKey] || severityConfig.bajo;
+        const afectacionesText = (incident && (incident.afectaciones || incident.descripcion))
+            ? String(incident.afectaciones || incident.descripcion)
+            : 'No especificadas';
+        const ubicacionText = `${incident.direccion || 'No especificada'}${incident.colonia ? `, ${incident.colonia}` : ''}`;
+        const shareSnippet = afectacionesText.length > 100 ? `${afectacionesText.substring(0, 100)}...` : afectacionesText;
 
         return `
             <div class="fade-in">
@@ -85,14 +91,14 @@ const UITemplates = {
                                 <span class="font-semibold text-slate-500 block mb-1">UBICACIÓN</span>
                                 <span class="text-slate-700 flex items-center gap-2">
                                     <i class="fas fa-map-pin text-red-500"></i>
-                                    ${incident.direccion || 'No especificada'}, ${incident.colonia}
+                                    ${ubicacionText}
                                 </span>
                             </div>
                             <div>
                                 <span class="font-semibold text-slate-500 block mb-2">NIVEL DE GRAVEDAD</span>
                                 <div class="status-indicator ${config.class}">
                                     <i class="${config.icon}"></i>
-                                    ${incident.gravedad.toUpperCase()}
+                                    ${gravedadKey.toUpperCase()}
                                 </div>
                             </div>
                         </div>
@@ -113,7 +119,7 @@ const UITemplates = {
                     <div>
                         <span class="font-semibold text-slate-500 block mb-2">AFECTACIONES REPORTADAS</span>
                         <div class="p-4 bg-white border border-slate-200 rounded-lg">
-                            <p class="text-slate-700 leading-relaxed">${incident.afectaciones}</p>
+                            <p class="text-slate-700 leading-relaxed">${afectacionesText}</p>
                         </div>
                     </div>
 
@@ -153,7 +159,7 @@ const UITemplates = {
                                 class="flex-1 text-sm py-3 px-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl hover:from-cyan-700 hover:to-blue-700 transition-all duration-300 shine-effect hover:scale-105 font-semibold">
                             <i class="fas fa-crosshairs mr-2"></i>Centrar en mapa
                         </button>
-                        <button onclick="UIManager.shareIncident('${incident.titulo}', '${incident.afectaciones.substring(0, 100)}...')" 
+                        <button onclick="UIManager.shareIncident('${incident.titulo}', '${shareSnippet}')" 
                                 class="text-sm py-3 px-4 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 rounded-xl hover:from-slate-200 hover:to-slate-300 transition-all duration-300 shine-effect hover:scale-105 font-semibold">
                             <i class="fas fa-share-alt"></i>
                         </button>
