@@ -19,3 +19,8 @@ __pycache__/
 
 # Logs
 *.log
+
+# Local / internal docs & experiments
+copilot-instructions.md
+ruta.md
+demo3d/
