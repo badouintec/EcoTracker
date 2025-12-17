@@ -530,7 +530,7 @@ const DataManager = {
                 return cachedData;
             }
 
-            Utils.showNotification('Cargando datos históricos...', 'info');
+            // Sin avisos en carga inicial (cosmético)
             
             const response = await fetch('assets/data/eventos_hidro.csv');
             if (!response.ok) {
@@ -564,7 +564,7 @@ const DataManager = {
             Utils.updateStatsDisplays();
             Utils.updateLegendCounts();
             
-            Utils.showNotification(`${incidents.length} eventos históricos cargados correctamente`, 'success');
+            // Sin avisos en carga inicial (cosmético)
             console.log('CSV data loaded successfully:', incidents);
             
         } catch (error) {
@@ -595,7 +595,7 @@ const DataManager = {
                         reports.forEach(report => {
                             MapManager.addCitizenReportToMap(report);
                         });
-                        Utils.showNotification(`${reports.length} reportes ciudadanos cargados (BD)`, 'info');
+                        // Sin avisos en carga inicial (cosmético)
                         console.log('📸 Reportes ciudadanos (BD):', reports);
                         return;
                     }
@@ -636,7 +636,7 @@ const DataManager = {
                 MapManager.addCitizenReportToMap(report);
             });
             
-            Utils.showNotification(`${citizenReports.length} reportes ciudadanos cargados`, 'info');
+            // Sin avisos en carga inicial (cosmético)
             console.log('📸 Reportes ciudadanos cargados:', citizenReports);
             
         } catch (error) {
@@ -1000,7 +1000,7 @@ const MapManager = {
             MapManager.layerControl.addOverlay(MapManager.agebLayer, '🏙️ AGEB Urbanos');
             
             console.log('✅ Capa AGEB Urbanas cargada exitosamente');
-            Utils.showNotification('Capa AGEB Urbanos disponible en el control de capas', 'success');
+            // Sin avisos en carga inicial (cosmético)
             
         } catch (error) {
             console.error('Error loading AGEB layer:', error);
